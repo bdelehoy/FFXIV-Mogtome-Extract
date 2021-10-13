@@ -10,11 +10,14 @@ from sys import argv
 import urllib.request
 import csv
 
-url                     = argv[1]
-output_filename         = argv[2]   # TODO: Sanitize to ensure it ends with ".csv"
+def sanitize_csv_file_name(s):
+    assert len(s) > 4
+    if s[-4:] != ".csv":
+        raise Exception("Filename must end in '.csv'")
+    return s
 
-ITEM_LIST_IDENTIFIER    = {"class": "item__list__name"}
-ITEM_COST_IDENTIFIER    = "td"
+url                     = argv[1]
+output_filename         = sanitize_csv_file_name(argv[2])
 
 fp = urllib.request.urlopen(url)
 soup = BeautifulSoup(fp, "html.parser")
@@ -28,9 +31,12 @@ try:
     info = soup.find_all('meta')[1]['content']
     print(info)
 except:
-    print(">> Could not find event description")
+    print(">> Could not fetch event description")
 
 print()
+
+ITEM_LIST_IDENTIFIER    = {"class": "item__list__name"}
+ITEM_COST_IDENTIFIER    = "td"
 
 items = soup.find_all(attrs=ITEM_LIST_IDENTIFIER)
 costs = soup.find_all(ITEM_COST_IDENTIFIER)
