@@ -23,13 +23,13 @@ parser.add_argument(
     "--output-file",
     type=str,
     default="output.csv",
-    help="CSV file in the script's directory to write results to. Will be created if it doesn't exist.",
+    help="CSV file in this script's directory to write results to. Will be created if it doesn't exist.",
 )
 parser.add_argument(
     "-v",
     "--verbose",
     action="store_true",
-    help="If provided, prints out each tome reward to the console.",
+    help="If provided, prints out parsed text from the webpage to the console.",
 )
 
 ################################
