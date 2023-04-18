@@ -1,7 +1,7 @@
 import argparse
 import csv
-from pathlib import Path
 import urllib.request
+from pathlib import Path
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -34,12 +34,6 @@ parser.add_argument(
 
 ################################
 
-# HTML tags and tag properties that uniquely define the data to look for
-ITEM_LIST_IDENTIFIER = {"class": "item__list__name"}
-ITEM_COST_IDENTIFIER = "td"
-
-################################
-
 
 def sanitize_url(s):
     parts = urlparse(s)
@@ -63,6 +57,19 @@ def get_cmd_line_inputs(inp: argparse.Namespace) -> tuple[str, bool, str]:
     return (url, output_filename, verbose)
 
 
+def get_items_and_costs(
+    s: BeautifulSoup, item_list_html_id: dict, cost_html_id: str
+) -> list[tuple[str, int]]:
+    items = s.find_all(attrs=item_list_html_id)
+    costs = s.find_all(cost_html_id)
+    assert len(items) == len(costs)
+
+    result = []
+    for i, c in zip(items, costs):
+        result.append((i.text, int(c.text)))
+    return result
+
+
 def write_csv(output_filename: Path, data):
     if len(data) > 0:
         full_path = Path(".", output_filename).resolve()
@@ -79,6 +86,10 @@ def write_csv(output_filename: Path, data):
 
 ################################
 
+# HTML tags and tag properties that uniquely define web elements to look for
+ITEM_LIST_IDENTIFIER = {"class": "item__list__name"}
+ITEM_COST_IDENTIFIER = "td"
+
 if __name__ == "__main__":
     # Sample URL: https://na.finalfantasyxiv.com/lodestone/special/mogmog-collection/202304/y7377p4z7j
 
@@ -93,31 +104,21 @@ if __name__ == "__main__":
         soup = BeautifulSoup(handler, "html.parser")
 
     title = soup.title.text
-    print()
-    print(title)
+    info = soup.find_all("meta")[1]["content"]
+    if VERBOSE:
+        print()
+        print(f"> {title}")
+        print(f"> {info}")
 
-    info = ""
-    try:
-        info = soup.find_all("meta")[1]["content"]
-        print(info)
-    except:
-        print(">> Could not fetch event description")
-
-    print()
-
-    items = soup.find_all(attrs=ITEM_LIST_IDENTIFIER)
-    costs = soup.find_all(ITEM_COST_IDENTIFIER)
-    assert len(items) == len(costs)
-
-    result = []
-    for i, c in zip(items, costs):
-        result.append((i.text, c.text))
-        if VERBOSE:
-            print(f"{i.text} (Cost: {c.text})")
+    all_items = get_items_and_costs(soup, ITEM_LIST_IDENTIFIER, ITEM_COST_IDENTIFIER)
+    if VERBOSE:
+        print()
+        for i, c in all_items:
+            print(f"> {i} (Cost: {c})")
 
     print()
-    print(">> Got", len(result), "items")
+    print("Got", len(all_items), "items")
 
-    print(f">> Writing to {OUTPUT_FILENAME}")
-    write_csv(OUTPUT_FILENAME, result)
-    print(">> Done!")
+    print(f"Writing to {OUTPUT_FILENAME}")
+    write_csv(OUTPUT_FILENAME, all_items)
+    print("Done!")

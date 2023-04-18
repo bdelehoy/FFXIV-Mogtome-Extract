@@ -10,7 +10,11 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["--url", "https://na.finalfantasyxiv.com/lodestone/special/mogmog-collection/202304/y7377p4z7j", "--verbose"],
+            "args": [
+                "--url",
+                "https://na.finalfantasyxiv.com/lodestone/special/mogmog-collection/202304/y7377p4z7j",
+                "--verbose"
+            ],
             "justMyCode": true
         }
     ]
