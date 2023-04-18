@@ -1,13 +1,10 @@
 import argparse
+import csv
+from pathlib import Path
 import urllib.request
 from urllib.parse import urlparse
-import csv
 
 from bs4 import BeautifulSoup
-
-# HTML tags and tag properties that uniquely define the data to look for
-ITEM_LIST_IDENTIFIER = {"class": "item__list__name"}
-ITEM_COST_IDENTIFIER = "td"
 
 ################################
 
@@ -37,6 +34,12 @@ parser.add_argument(
 
 ################################
 
+# HTML tags and tag properties that uniquely define the data to look for
+ITEM_LIST_IDENTIFIER = {"class": "item__list__name"}
+ITEM_COST_IDENTIFIER = "td"
+
+################################
+
 
 def sanitize_url(s):
     parts = urlparse(s)
@@ -60,10 +63,24 @@ def get_cmd_line_inputs(inp: argparse.Namespace) -> tuple[str, bool, str]:
     return (url, output_filename, verbose)
 
 
+def write_csv(output_filename: Path, data):
+    if len(data) > 0:
+        full_path = Path(".", output_filename).resolve()
+        with open(full_path, "w+", newline="") as csv_file:
+            csv_writer = csv.writer(
+                csv_file, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL
+            )
+            csv_writer.writerow([URL])
+            csv_writer.writerow([title])
+            csv_writer.writerow([info])
+            for i in data:
+                csv_writer.writerow(i)
+
+
 ################################
 
 if __name__ == "__main__":
-    print(">> Initializing....")
+    # Sample URL: https://na.finalfantasyxiv.com/lodestone/special/mogmog-collection/202304/y7377p4z7j
 
     URL, OUTPUT_FILENAME, VERBOSE = get_cmd_line_inputs(parser.parse_args())
     print(f"URL:            {URL}")
@@ -72,9 +89,8 @@ if __name__ == "__main__":
     print()
     print("Working....")
 
-    fp = urllib.request.urlopen(URL)
-    soup = BeautifulSoup(fp, "html.parser")
-    fp.close()
+    with urllib.request.urlopen(URL) as handler:
+        soup = BeautifulSoup(handler, "html.parser")
 
     title = soup.title.text
     print()
@@ -102,17 +118,6 @@ if __name__ == "__main__":
     print()
     print(">> Got", len(result), "items")
 
-    print(">> Writing to", OUTPUT_FILENAME)
-    if len(result) > 0:
-        with open(OUTPUT_FILENAME, "w+", newline="") as csv_file:
-            csv_writer = csv.writer(
-                csv_file, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL
-            )
-            csv_writer.writerow([URL])
-            csv_writer.writerow([title])
-            csv_writer.writerow([info])
-            for i in result:
-                csv_writer.writerow(i)
-        print(">> Done!")
-    else:
-        print(">> CSV failed to write (parsed no data)")
+    print(f">> Writing to {OUTPUT_FILENAME}")
+    write_csv(OUTPUT_FILENAME, result)
+    print(">> Done!")
