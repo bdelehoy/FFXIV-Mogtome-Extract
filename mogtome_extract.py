@@ -1,6 +1,7 @@
 import argparse
 import csv
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -35,26 +36,28 @@ parser.add_argument(
 ################################
 
 
-def sanitize_url(s):
+def sanitize_url(s) -> tuple[str, datetime]:
     parts = urlparse(s)
     if not parts.netloc.endswith("finalfantasyxiv.com"):
         raise ValueError(
             f"URL must belong to the domain 'finalfantasyxiv.com'\nGot: '{parts.netloc}' (via {s})"
         )
-    return s
+    event_period_from_url = parts.path.split("/")[-2]
+    yearmonth = datetime.strptime(event_period_from_url, "%Y%m")
+    return (s, yearmonth)
 
 
-def sanitize_csv_file_name(s):
+def sanitize_csv_file_name(s) -> str:
     if len(s) > 4 and s[-4:] == ".csv":
         return s
     raise NameError(f"Output filename must end in '.csv'\nGot: '{s}'")
 
 
-def get_cmd_line_inputs(inp: argparse.Namespace) -> tuple[str, bool, str]:
-    url = sanitize_url(inp.url)
+def get_cmd_line_inputs(inp: argparse.Namespace) -> tuple[str, datetime, bool, str]:
+    url, yearmonth = sanitize_url(inp.url)
     output_filename = sanitize_csv_file_name(inp.output_file)
     verbose = inp.verbose
-    return (url, output_filename, verbose)
+    return (url, yearmonth, output_filename, verbose)
 
 
 def get_items_and_costs(
@@ -70,18 +73,20 @@ def get_items_and_costs(
     return result
 
 
-def write_csv(output_filename: Path, data):
+def write_csv(output_filename: Path, data) -> None:
     if len(data) > 0:
         full_path = Path(".", output_filename).resolve()
-        with open(full_path, "w+", newline="") as csv_file:
+        with open(full_path, "w+", encoding="utf-8", newline="") as csv_file:
             csv_writer = csv.writer(
                 csv_file, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL
             )
             csv_writer.writerow([URL])
             csv_writer.writerow([title])
             csv_writer.writerow([info])
+            csv_writer.writerow(["ITEM", "COST"])
             for i in data:
                 csv_writer.writerow(i)
+    return
 
 
 ################################
@@ -93,8 +98,9 @@ ITEM_COST_IDENTIFIER = "td"
 if __name__ == "__main__":
     # Sample URL: https://na.finalfantasyxiv.com/lodestone/special/mogmog-collection/202304/y7377p4z7j
 
-    URL, OUTPUT_FILENAME, VERBOSE = get_cmd_line_inputs(parser.parse_args())
+    URL, EVENT_PERIOD, OUTPUT_FILENAME, VERBOSE = get_cmd_line_inputs(parser.parse_args())
     print(f"URL:            {URL}")
+    print(f"Event period:   {EVENT_PERIOD.strftime('%b %Y')}")
     print(f"Output file:    {OUTPUT_FILENAME}")
     print(f"Verbose output: {VERBOSE}")
     print()
